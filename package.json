@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-webpack": "^5.13.0"
+  },
+  "dependencies": {
+    "serverless-plugin-tracing": "^2.0.0"
+  }
+}
