@@ -2,16 +2,11 @@ import { TodosAccess } from '../dataLayer/todosAcess'
 import { AttachmentUtils } from '../helpers/attachmentUtils';
 import { TodoItem } from '../models/TodoItem'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
-import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
-import { createLogger } from '../utils/logger'
 import * as uuid from 'uuid'
 import * as AWS from 'aws-sdk';
-import * as createError from 'http-errors'
 import { TodoUpdate } from '../models/TodoUpdate';
-import { getUserId } from '../lambda/utils';
 
 // Implement businessLogic
-const logger = createLogger('TodosAccess')
 const attachmentUtils = new AttachmentUtils()
 const todosAccess = new TodosAccess()
 
@@ -48,7 +43,7 @@ export async function deleteTodo(userId: string, todoId: string): Promise<void> 
 }
 
 export async function generateUploadUrl(userId: string, todoId: string): Promise<string> {
-    const bucketName = process.env.IMAGES_S3_BUCKET;
+    const bucketName = process.env.ATTACHMENT_S3_BUCKET;
     const urlExpiration = parseInt(process.env.SIGNED_URL_EXPIRATION, 10);
     const s3 = new AWS.S3({ signatureVersion: 'v4' });
     const signedUrl = s3.getSignedUrl('putObject', {

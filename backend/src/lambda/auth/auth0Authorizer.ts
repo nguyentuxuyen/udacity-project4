@@ -57,22 +57,35 @@ export const handler = async (
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const token = getToken(authHeader)
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
-
-  // Implement token verification
-  // You should implement it similarly to how it was implemented for the exercise for the lesson 5
-  // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  //return undefined
-  const response = await Axios.get(jwksUrl)
-  const keys = response.data.keys
-  const signingKeys = keys.find(key => key.kid = jwt.header.kid)
-  logger.info('signingKeys', signingKeys)
-  if(!signingKeys) {
-    throw new Error('The JWKS endpoint dont have key')
+  const kid = jwt.header.kid
+  const jwks = await Axios.get(jwksUrl)
+  const jwkKeys = jwks.data.keys;
+  if (!jwkKeys || !jwkKeys.length) {
+    throw new Error('The JWKS endpoint did not contain any keys')
   }
-  const pemData = signingKeys.x5c[0]
-  const verifyToken = verify(token, pemData, {algorithms: ['RS256']}) as JwtPayload
-  logger.info('verifyToken', verifyToken)
-  return verifyToken
+  const signingKeys = jwkKeys
+    .filter(key => key.use === 'sig' // JWK property `use` determines the JWK is for signature verification
+      && key.kty === 'RSA' // We are only supporting RSA (RS256)
+      && key.kid           // The `kid` must be present to be useful for later
+      && ((key.x5c && key.x5c.length) || (key.n && key.e)) // Has useful public keys
+    ).map(key => {
+      return { kid: key.kid, nbf: key.nbf, publicKey: certToPEM(key.x5c[0]) }
+    });
+  // If at least one signing key doesn't exist we have a problem... Kaboom.
+  if (!signingKeys.length) {
+    throw new Error('The JWKS endpoint did not contain any signature verification keys')
+  }
+  const signingKey = signingKeys.find(key => key.kid === kid)
+  if (!signingKey) {
+    throw new Error(`Unable to find a signing key that matches '${kid}'`)
+  }
+  return verify(token, signingKey.publicKey, { algorithms: ['RS256'] }) as JwtPayload
+}
+
+function certToPEM(cert: string): string {
+  cert = cert.match(/.{1,64}/g).join('\n')
+  cert = `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`
+  return cert
 }
 
 function getToken(authHeader: string): string {
@@ -86,3 +99,4 @@ function getToken(authHeader: string): string {
 
   return token
 }
+

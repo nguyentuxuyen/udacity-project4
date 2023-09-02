@@ -14,7 +14,7 @@ export class AttachmentUtils{
     ) {}
 
     getAttachmenUrl(todoId: string): string {
-        return 'https://${this.bucketName}.s3.amazonaws.com/${todoId}'
+        return `https://${this.bucketName}.s3.amazonaws.com/${todoId}`
     }
 
     getUploadUrl(todoId: string) {
